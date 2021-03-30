@@ -44,61 +44,103 @@
       .activity:nth-child(odd) .area {
         fill: #5ca3c1;
       }
+
+      .activity:nth-child(odd) .area.active {
+        fill: gold;
+      }
+
+      .area.active {
+        fill: gold;
+      }
     </style>
   </head>
   <body>
+    <div>
+      <div>Select a play:</div>
+
+      <select id="play-select">
+        <option value="macbeth">Macbeth</option>
+        <option value="midsummer">Midsummer Night's Dream</option>
+        <option value="merchant">Merchant of Venice</option>
+      </select>
+    </div>
     <script src="https://d3js.org/d3.v4.min.js"></script>
     <script>
       // Using example from https://bl.ocks.org/armollica/3b5f83836c1de5cca7b1d35409a013e3
       // Next: Fine grain line numbers....maybe chunk....every 5? How many lines? Ugh but then max is 5....
       // [x] maybe just smooth out with curve
 
-      // shoud be able to hover scene idx (label them properly haha) and seee all speakers highlighted
+      // [ ] shoud be able to hover scene idx (label them properly haha) and seee all speakers highlighted
       // can we force to show ALL scene labels?
 
-      // scene titlseshould prob be vertical
+      // [ ] scene titlseshould prob be vertical
 
-      // should pull in all data on load and choose play with dropdown
+      // [x] should pull in all data on load and choose play with dropdown
 
       // NOTE: One thing that's really nice is the speakers are NATURALLY sorted by entry point
-      // could addd a dropdown to also sort by "most to least"
+      // [ ] could addd a dropdown to also sort by "most to least"
 
       // a little more overlap might be nice
 
-      // should be able to hover a speaker and highlight their portion (and scenes)
+      // [x] should be able to hover a speaker and highlight their portion
+      // [ ] (and scenes)
 
-      // toggle act/scene delineation lines
+      // [ ] toggle act/scene delineation lines
 
       // Oooooh perhaps each scene should geet as much hoorizontal space as it has lines....that seems right haha
 
-      // maybe click on a speaker to see all their lines
+      // [ ] maybe click on a speaker to see all their lines
       // (new route?)
 
       // Give color coding to areas based on diffeerennt types of character
 
       // perhaps some indication of gender?
 
-      // try it with line by line, 1 or 0, with smooothing, rather than by scene
+      // [x] try it with line by line, 1 or 0, with smooothing, rather than by scene
       // this would be one way to solve the "each sceene shoulld have width proppoprtial to its num of lines" issue
       // Yeeah.....not quitee haha... looks ilke dna coding
       // Maybe try 5- or 10-line chunks?
 
       //  when show lines filtered by  char, perhaps toggle option to show next/prev lines for eacch of their "chunks"
+      // Have to be thoughtful about how to handle coontinuous ddialogue...
 
-      var margin = { top: 30, right: 20, bottom: 30, left: 180 },
+      // you can use the tickValues() function of the axis which allows you to specify tick values explicitly.
+
+      // show all chars that someone speaks with (i.e. speaks before or after, within a scene)
+
+      // show all scenes the char is in, their percentage of lines within the whole scene
+
+      // hmm....how show STRENGTH of connection with network graph?
+      // https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/data_network.json
+      // https://www.d3-graph-gallery.com/graph/network_basic.html
+      // https://github.com/d3/d3-force
+
+      // https://observablehq.com/@d3/force-directed-graph
+      // ^ Certainly seems we can add "value" -- and alsoo "group" to color differently!
+      // My issue with these netwwork graphs is legibility....needing mouseover to show tooolltip with node name...
+
+      window.onload = () => {
+        const select = document.getElementById("play-select");
+        select.addEventListener("change", (ev) => {
+          const val = ev.target.value;
+          run(val);
+        });
+      };
+
+      var margin = { top: 30, right: 20, bottom: 100, left: 180 },
         width = window.innerWidth - margin.left - margin.right,
         height = window.innerHeight - margin.top - margin.bottom;
 
       // Percent two area charts can overlap
       var overlap = 0.6;
 
-      var svg = d3
-        .select("body")
-        .append("svg")
-        .attr("width", width + margin.left + margin.right)
-        .attr("height", height + margin.top + margin.bottom)
-        .append("g")
-        .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+      // var svg = d3
+      //   .select("body")
+      //   .append("svg")
+      //   .attr("width", width + margin.left + margin.right)
+      //   .attr("height", height + margin.top + margin.bottom)
+      //   .append("g")
+      //   .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
       // NOTE: To change from scene/line, change this fn, and hcange spkrs/spkrs2
       var x = function (d) {
@@ -151,23 +193,6 @@
         return res;
       }
 
-      // function getLinesBySpeaker(scenes) {
-      //   const speakers = {};
-
-      //   scenes.forEach((scene) => {
-      //     scene.lines.forEach((line) => {
-      //       if (line.type === "text") {
-      //         if (!speakers.hasOwnProperty(line.speaker)) {
-      //           speakers[line.speaker] = 0;
-      //         }
-      //         speakers[line.speaker]++;
-      //       }
-      //     });
-      //   });
-
-      //   return speakers;
-      // }
-
       /*
       Take array of scenes, each with lines array, convert into...
       Antonio | {lineNo} | {0|1, whether speaks}
@@ -185,29 +210,6 @@
       https://bl.ocks.org/armollica/3b5f83836c1de5cca7b1d35409a013e3
 
       */
-
-      function getLinesBySpeakerByScene(scenes) {
-        const res = [];
-
-        const speakers = getSpeakers(scenes);
-        // console.log("spkers.....", speakers);
-
-        speakers.forEach((speaker) => {
-          scenes.forEach((scene, sceneIdx) => {
-            let numLines = 0;
-            scene.lines.forEach((line) => {
-              if (line.type === "text" && line.speaker === speaker) numLines++;
-            });
-            res.push({
-              speaker,
-              sceneIdx,
-              value: numLines,
-            });
-          });
-        });
-
-        return res;
-      }
 
       function getLinesBySpeakerByScene(scenes) {
         const res = [];
@@ -292,102 +294,270 @@
         return res;
       }
 
+      function getSceneBreakdown(scene) {
+        const numLines = scene.lines.filter((l) => l.type === "text").length;
+        const speakers = {};
+        // speaker items look like:
+        // macbeth: 30
+        scene.lines
+          .filter((l) => l.type === "text")
+          .forEach((line) => {
+            if (!speakers.hasOwnProperty(line.speaker)) {
+              speakers[line.speaker] = 0;
+            }
+            speakers[line.speaker]++;
+          });
+
+        // return speakers;
+
+        const speakerAmts = Object.keys(speakers)
+          .map((speaker) => {
+            return { speaker, value: speakers[speaker] / numLines };
+          })
+          .sort((a, b) => b.value - a.value);
+
+        return {
+          numLines,
+          speakerAmts,
+        };
+      }
+
+      function slug(name) {
+        return name.replace(/\s/g, "_");
+      }
+
+      function getSpeeches(scene) {
+        const speeches = [];
+
+        let speech = {
+          speaker: "",
+          lines: [],
+        };
+        // console.log(scene);
+
+        scene.lines.forEach((line, idx) => {
+          if (idx === scene.lines.length - 1) {
+            // last line: push speech
+            speech.lines.push(line.value);
+            speeches.push(speech);
+            return;
+          }
+          if (line.type === "speech") {
+            // skip first speaker line:
+            if (speech.lines.length > 0) {
+              speeches.push(speech);
+              speech = {};
+              speech.lines = [];
+            }
+            speech.speaker = line.value;
+          } else {
+            speech.lines.push(line.value);
+          }
+        });
+
+        return speeches;
+      }
+
+      /*
+      Idea here is to naively assume that when person B speaks directly after person A, they are interacting.s
+    
+      Hmm...we could alternatively try to weight interactions by num of lines
+      */
+      function getCharacterInteractions(scenes) {
+        const interactions = {};
+
+        scenes.forEach((scene) => {
+          const speeches = getSpeeches(scene);
+          let prevSpeaker = speeches[0].speaker;
+          speeches.slice(1).forEach((speech) => {
+            if (!interactions.hasOwnProperty(prevSpeaker)) {
+              interactions[prevSpeaker] = {};
+            }
+            if (!interactions[prevSpeaker].hasOwnProperty(speech.speaker)) {
+              interactions[prevSpeaker][speech.speaker] = 0;
+            }
+            interactions[prevSpeaker][speech.speaker]++;
+            prevSpeaker = speech.speaker;
+          });
+        });
+
+        return interactions;
+      }
+
+      function getInteractionTotals(interactions) {
+        const res = {};
+
+        Object.keys(interactions).forEach((speaker) => {
+          Object.keys(interactions[speaker]).forEach((otherSpeaker) => {
+            const pairRep = [speaker, otherSpeaker].sort().join("_");
+            if (!res.hasOwnProperty(pairRep)) {
+              res[pairRep] = 0;
+            }
+            res[pairRep] += interactions[speaker][otherSpeaker];
+          });
+        });
+
+        // res is an object like {"Banquo_Macbeth": 42, ...}
+
+        return Object.keys(res)
+          .map((pair) => {
+            return { pair, value: res[pair] };
+          })
+          .sort((a, b) => b.value - a.value);
+        // return res;
+      }
+
       // ============================================================
 
-      d3.json("./assets/macbeth.json", function (error, dataFlat) {
-        // if (error) throw error;
-        console.log("got it", dataFlat);
+      function run(playName) {
+        d3.selectAll("svg").remove();
 
-        const spkrs = getLinesBySpeakerByScene(dataFlat);
-        // console.log("spkrs:", spkrs);
-
-        // const spkrs2 = getLinesBySpeaker(dataFlat);
-        // console.log("spkrs2", spkrs2);
-
-        const spkrs3 = getLinesBySpeakerByChunk(dataFlat);
-        console.log("spkrs3", spkrs3);
-
-        var data = d3
-          .nest()
-          .key(function (d) {
-            return d.speaker;
-          })
-          .entries(spkrs3);
-        // console.log("DATA", data);
-
-        xScale.domain(d3.extent(spkrs3, x));
-
-        speakerScale.domain(
-          data.map(function (d) {
-            return d.key;
-          })
-        );
-
-        var areaChartHeight = (1 + overlap) * (height / speakerScale.domain().length);
-        // console.log("hgt", areaChartHeight);
-        yScale.domain(d3.extent(spkrs3, y)).range([areaChartHeight, 0]);
-
-        area.y0(yScale(0));
-
-        svg
+        var svg = d3
+          .select("body")
+          .append("svg")
+          .attr("width", width + margin.left + margin.right)
+          .attr("height", height + margin.top + margin.bottom)
           .append("g")
-          .attr("class", "axis axis--x")
-          .attr("transform", "translate(0," + height + ")")
-          .call(xAxis);
+          .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
-        svg
-          .append("g")
-          .attr("class", "axis axis--activity")
-          .call(speakerAxis)
-          .on("mouseover", function (d, i) {
-            console.log(d, i);
-            if (!d) return;
-            const area = document.getElementById(`area-${d.key}`);
-            // console.log("mouse d", d.key);
+        d3.json(`./assets/${playName}.json`, function (error, dataFlat) {
+          // if (error) throw error;
+          // console.log("got it", dastaFlat);
+
+          const speeches = getSpeeches(dataFlat[1]);
+          console.log("speeches", speeches);
+
+          const charInteractions = getCharacterInteractions(dataFlat);
+          console.log("ints", charInteractions);
+
+          const totals = getInteractionTotals(charInteractions);
+          console.log("tots", totals);
+
+          const breakdown = getSceneBreakdown(dataFlat[0]);
+          console.log("bd", breakdown);
+
+          const spkrs = getLinesBySpeakerByScene(dataFlat);
+          // console.log("spkrs:", spkrs);
+
+          // const spkrs2 = getLinesBySpeaker(dataFlat);
+          // console.log("spkrs2", spkrs2);
+
+          const spkrs3 = getLinesBySpeakerByChunk(dataFlat, 10);
+          // console.log("spkrs3", spkrs3);
+
+          var data = d3
+            .nest()
+            .key(function (d) {
+              return d.speaker;
+            })
+            .entries(spkrs3);
+          // console.log("DATA", data);
+
+          xScale.domain(d3.extent(spkrs3, x));
+
+          speakerScale.domain(
+            data.map(function (d) {
+              return d.key;
+            })
+          );
+
+          var areaChartHeight = (1 + overlap) * (height / speakerScale.domain().length);
+          // console.log("hgt", areaChartHeight);
+          yScale.domain(d3.extent(spkrs3, y)).range([areaChartHeight, 0]);
+
+          area.y0(yScale(0));
+
+          svg
+            .append("g")
+            .attr("class", "axis axis--x")
+            .attr("transform", "translate(0," + height + ")")
+            .call(xAxis);
+
+          svg.append("g").attr("class", "axis axis--activity").call(speakerAxis);
+          // .on("mouseover", function (d, i) {
+          //   console.log(d, i);
+
+          //   // d3.select(this).attr("font-weight", "bold");
+          //   if (!d) return;
+          //   const area = document.getElementById(`area-${d.key}`);
+          //   // console.log("mouse d", d.key);
+          // });
+
+          svg.selectAll(".axis--activity .tick").on("mouseover", function (d, i) {
+            // console.log("mo", d, i);
+
+            // [x] TODO: also bold the label
+
+            d3.selectAll(".area").attr("class", "area");
+            d3.selectAll(".axis--activity .tick").attr("font-weight", "normal");
+            d3.select(this).attr("font-weight", "bold");
+
+            const area = d3.select(`#area-${slug(d)}`);
+
+            // console.log("got area", area);
+            area.attr("class", "area active");
+            // console.log(area);
           });
 
-        var gSpeaker = svg
-          .append("g")
-          .attr("class", "activities")
-          .selectAll(".activity")
-          .data(data)
-          .enter()
-          .append("g")
-          .attr("class", function (d) {
-            return "activity activity--" + d.key;
-          })
-          .attr("transform", function (d) {
-            var ty = speakerValue(d) - speakerScale.bandwidth() + 5;
-            // console.log("val", d, speakerValue(d), "scl", speakerScale.bandwidth());
+          var gSpeaker = svg
+            .append("g")
+            .attr("class", "activities")
+            .selectAll(".activity")
+            .data(data)
+            .enter()
+            .append("g")
+            .attr("class", function (d) {
+              return "activity activity--" + d.key;
+            })
+            .attr("transform", function (d) {
+              var ty = speakerValue(d) - speakerScale.bandwidth() + 5;
+              // console.log("val", d, speakerValue(d), "scl", speakerScale.bandwidth());
 
-            // var ty = 20;
-            return "translate(0," + ty + ")";
-          });
+              // var ty = 20;
+              return "translate(0," + ty + ")";
+            });
 
-        gSpeaker
-          .append("path")
-          .attr("class", "area")
-          // .attr("id", function (d, i) {
-          //   // console.log(d);
-          //   return `area-${d.key}`;
-          // })
-          .datum(function (d) {
-            // console.log("dddd", d);
-            const x = d.values;
-            // console.log(x);
-            return x;
-          })
-          .attr("d", area);
+          gSpeaker
+            .append("path")
+            .attr("class", "area")
+            .attr("id", function (d, i) {
+              // TODOO: If spaces in namee "Lady Maccbeth", this won't work
+              // [x] fixed with slug
+              // Hmm....HECATE also won't work, weirdly...
+              // Oh it's like every OTHER isn't working...
+              // [x] fixed with css override
+              // console.log(d.key, slug(d.key));
 
-        gSpeaker
-          .append("path")
-          .attr("class", "line")
-          .datum(function (d) {
-            // console.log("dd", d.values);
-            return d.values;
-          })
-          .attr("d", line);
-      });
+              return `area-${slug(d.key)}`;
+            })
+            .datum(function (d) {
+              // console.log("dddd", d);
+              const x = d.values;
+              // console.log(x);
+              return x;
+            })
+            .attr("d", area);
+
+          gSpeaker
+            .append("path")
+            .attr("class", "line")
+            .datum(function (d) {
+              // console.log("dd", d.values);
+              return d.values;
+            })
+            .attr("d", line);
+        });
+      }
+
+      run("macbeth");
+
+      // setTimeout(() => {
+      //   run("macbeth");
+      // }, 1000);
+
+      // setTimeout(() => {
+      //   run("midsummer");
+      // }, 2000);
     </script>
   </body>
 </html>
