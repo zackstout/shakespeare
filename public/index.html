@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <style>
+      svg {
+        display: block;
+        margin: 0 auto;
+      }
+
+      .axis .domain {
+        display: none;
+      }
+
+      .axis--x text {
+        fill: #999;
+      }
+
+      .axis--x line {
+        stroke: #aaa;
+      }
+
+      .axis--activity .tick line {
+        display: none;
+      }
+
+      .axis--activity text {
+        font-size: 12px;
+        fill: #777;
+      }
+
+      .axis--activity .tick:nth-child(odd) text {
+        fill: #222;
+      }
+
+      .line {
+        fill: none;
+        stroke: #fff;
+      }
+
+      .area {
+        fill: #448cab;
+      }
+
+      .activity:nth-child(odd) .area {
+        fill: #5ca3c1;
+      }
+    </style>
+  </head>
+  <body>
+    <script src="https://d3js.org/d3.v4.min.js"></script>
+    <script>
+      // Using example from https://bl.ocks.org/armollica/3b5f83836c1de5cca7b1d35409a013e3
+      // Next: Fine grain line numbers....maybe chunk....every 5? How many lines? Ugh but then max is 5....
+      // [x] maybe just smooth out with curve
+
+      // shoud be able to hover scene idx (label them properly haha) and seee all speakers highlighted
+      // can we force to show ALL scene labels?
+
+      // scene titlseshould prob be vertical
+
+      // should pull in all data on load and choose play with dropdown
+
+      // NOTE: One thing that's really nice is the speakers are NATURALLY sorted by entry point
+      // could addd a dropdown to also sort by "most to least"
+
+      // a little more overlap might be nice
+
+      // should be able to hover a speaker and highlight their portion (and scenes)
+
+      // toggle act/scene delineation lines
+
+      // Oooooh perhaps each scene should geet as much hoorizontal space as it has lines....that seems right haha
+
+      // maybe click on a speaker to see all their lines
+      // (new route?)
+
+      // Give color coding to areas based on diffeerennt types of character
+
+      // perhaps some indication of gender?
+
+      // try it with line by line, 1 or 0, with smooothing, rather than by scene
+      // this would be one way to solve the "each sceene shoulld have width proppoprtial to its num of lines" issue
+      // Yeeah.....not quitee haha... looks ilke dna coding
+      // Maybe try 5- or 10-line chunks?
+
+      //  when show lines filtered by  char, perhaps toggle option to show next/prev lines for eacch of their "chunks"
+
+      var margin = { top: 30, right: 20, bottom: 30, left: 180 },
+        width = window.innerWidth - margin.left - margin.right,
+        height = window.innerHeight - margin.top - margin.bottom;
+
+      // Percent two area charts can overlap
+      var overlap = 0.6;
+
+      var svg = d3
+        .select("body")
+        .append("svg")
+        .attr("width", width + margin.left + margin.right)
+        .attr("height", height + margin.top + margin.bottom)
+        .append("g")
+        .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+      // NOTE: To change from scene/line, change this fn, and hcange spkrs/spkrs2
+      var x = function (d) {
+          // return d.sceneIdx;
+
+          return d.chunkIdx;
+          // return d.lineNo;
+        },
+        xScale = d3.scaleLinear().range([0, width]),
+        // xScale = d3.range([0, width]),
+        xValue = function (d) {
+          return xScale(x(d));
+        },
+        xAxis = d3.axisBottom(xScale);
+
+      var y = function (d) {
+          return d.value;
+        },
+        yScale = d3.scaleLinear(),
+        yValue = function (d) {
+          return yScale(y(d));
+        };
+
+      var speaker = function (d) {
+          return d.key;
+        },
+        speakerScale = d3.scaleBand().range([0, height]),
+        speakerValue = function (d) {
+          // console.log("sprkcl", speakerScale("JESSICA"));
+          return speakerScale(speaker(d));
+        },
+        speakerAxis = d3.axisLeft(speakerScale);
+
+      var area = d3.area().x(xValue).y1(yValue).curve(d3.curveCardinal);
+
+      var line = area.lineY1();
+
+      console.log("we in");
+
+      function getSpeakers(scenes) {
+        const res = [];
+        scenes.forEach((scene) => {
+          scene.lines.forEach((line) => {
+            if (line.type === "speech" && !res.includes(line.value)) {
+              res.push(line.value);
+            }
+          });
+        });
+
+        return res;
+      }
+
+      // function getLinesBySpeaker(scenes) {
+      //   const speakers = {};
+
+      //   scenes.forEach((scene) => {
+      //     scene.lines.forEach((line) => {
+      //       if (line.type === "text") {
+      //         if (!speakers.hasOwnProperty(line.speaker)) {
+      //           speakers[line.speaker] = 0;
+      //         }
+      //         speakers[line.speaker]++;
+      //       }
+      //     });
+      //   });
+
+      //   return speakers;
+      // }
+
+      /*
+      Take array of scenes, each with lines array, convert into...
+      Antonio | {lineNo} | {0|1, whether speaks}
+      So basicallly into a huge array with each object
+      {speaker ("activity"), line ("time"), value ("p")}
+
+      haha no
+
+      do it by scene, like this:
+
+      {speaker}, {sceneNo}, {numLinesInScene}
+
+      https://github.com/halhen/viz-pub/blob/master/sports-time-of-day/activity.tsv
+
+      https://bl.ocks.org/armollica/3b5f83836c1de5cca7b1d35409a013e3
+
+      */
+
+      function getLinesBySpeakerByScene(scenes) {
+        const res = [];
+
+        const speakers = getSpeakers(scenes);
+        // console.log("spkers.....", speakers);
+
+        speakers.forEach((speaker) => {
+          scenes.forEach((scene, sceneIdx) => {
+            let numLines = 0;
+            scene.lines.forEach((line) => {
+              if (line.type === "text" && line.speaker === speaker) numLines++;
+            });
+            res.push({
+              speaker,
+              sceneIdx,
+              value: numLines,
+            });
+          });
+        });
+
+        return res;
+      }
+
+      function getLinesBySpeakerByScene(scenes) {
+        const res = [];
+
+        const speakers = getSpeakers(scenes);
+        // console.log("spkers.....", speakers);
+
+        speakers.forEach((speaker) => {
+          scenes.forEach((scene, sceneIdx) => {
+            let numLines = 0;
+            scene.lines.forEach((line) => {
+              if (line.type === "text" && line.speaker === speaker) numLines++;
+            });
+            res.push({
+              speaker,
+              sceneIdx,
+              value: numLines,
+            });
+          });
+        });
+
+        return res;
+      }
+
+      /*
+      Same as above, but don't break at scenes
+      */
+      function getLinesBySpeaker(scenes) {
+        const res = [];
+        const speakers = getSpeakers(scenes);
+
+        speakers.forEach((speaker) => {
+          let lineNo = 0;
+
+          scenes.forEach((scene, sceneIdx) => {
+            scene.lines.forEach((line) => {
+              /// TODO: shoud only do this if type is text
+              lineNo++;
+
+              res.push({
+                speaker,
+                lineNo,
+                value: line.type === "text" && line.speaker === speaker ? 1 : 0,
+              });
+            });
+          });
+        });
+
+        return res;
+      }
+
+      function getLinesBySpeakerByChunk(scenes, chunkSize = 10) {
+        const res = [];
+        const speakers = getSpeakers(scenes);
+
+        speakers.forEach((speaker) => {
+          let chunkIdx = 0;
+          let lineNo = 0;
+          let numLines = 0;
+
+          scenes.forEach((scene, sceneIdx) => {
+            scene.lines.forEach((line) => {
+              if (line.type === "text") lineNo++;
+
+              if (line.type === "text" && line.speaker === speaker) numLines++;
+
+              if (lineNo % chunkSize === 0 && lineNo > 0) {
+                // save chunk, start new one
+                res.push({
+                  speaker,
+                  chunkIdx,
+                  value: numLines,
+                });
+                lineNo = 0;
+                numLines = 0;
+                chunkIdx++;
+              }
+            });
+          });
+        });
+
+        return res;
+      }
+
+      // ============================================================
+
+      d3.json("./assets/macbeth.json", function (error, dataFlat) {
+        // if (error) throw error;
+        console.log("got it", dataFlat);
+
+        const spkrs = getLinesBySpeakerByScene(dataFlat);
+        // console.log("spkrs:", spkrs);
+
+        // const spkrs2 = getLinesBySpeaker(dataFlat);
+        // console.log("spkrs2", spkrs2);
+
+        const spkrs3 = getLinesBySpeakerByChunk(dataFlat);
+        console.log("spkrs3", spkrs3);
+
+        var data = d3
+          .nest()
+          .key(function (d) {
+            return d.speaker;
+          })
+          .entries(spkrs3);
+        // console.log("DATA", data);
+
+        xScale.domain(d3.extent(spkrs3, x));
+
+        speakerScale.domain(
+          data.map(function (d) {
+            return d.key;
+          })
+        );
+
+        var areaChartHeight = (1 + overlap) * (height / speakerScale.domain().length);
+        // console.log("hgt", areaChartHeight);
+        yScale.domain(d3.extent(spkrs3, y)).range([areaChartHeight, 0]);
+
+        area.y0(yScale(0));
+
+        svg
+          .append("g")
+          .attr("class", "axis axis--x")
+          .attr("transform", "translate(0," + height + ")")
+          .call(xAxis);
+
+        svg
+          .append("g")
+          .attr("class", "axis axis--activity")
+          .call(speakerAxis)
+          .on("mouseover", function (d, i) {
+            console.log(d, i);
+            if (!d) return;
+            const area = document.getElementById(`area-${d.key}`);
+            // console.log("mouse d", d.key);
+          });
+
+        var gSpeaker = svg
+          .append("g")
+          .attr("class", "activities")
+          .selectAll(".activity")
+          .data(data)
+          .enter()
+          .append("g")
+          .attr("class", function (d) {
+            return "activity activity--" + d.key;
+          })
+          .attr("transform", function (d) {
+            var ty = speakerValue(d) - speakerScale.bandwidth() + 5;
+            // console.log("val", d, speakerValue(d), "scl", speakerScale.bandwidth());
+
+            // var ty = 20;
+            return "translate(0," + ty + ")";
+          });
+
+        gSpeaker
+          .append("path")
+          .attr("class", "area")
+          // .attr("id", function (d, i) {
+          //   // console.log(d);
+          //   return `area-${d.key}`;
+          // })
+          .datum(function (d) {
+            // console.log("dddd", d);
+            const x = d.values;
+            // console.log(x);
+            return x;
+          })
+          .attr("d", area);
+
+        gSpeaker
+          .append("path")
+          .attr("class", "line")
+          .datum(function (d) {
+            // console.log("dd", d.values);
+            return d.values;
+          })
+          .attr("d", line);
+      });
+    </script>
+  </body>
+</html>
